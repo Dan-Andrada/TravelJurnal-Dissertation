@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FFFDF9"
+    android:padding="24dp">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <EditText
+            android:id="@+id/notesEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Write your thoughts here..."
+            android:textColor="#3B2000"
+            android:textSize="16sp"
+            android:padding="12dp"
+            android:background="@android:color/transparent"
+            android:inputType="textMultiLine"
+            android:gravity="top"
+            android:enabled="false"
+            android:textStyle="italic" />
+    </ScrollView>
+
+    <Button
+        android:id="@+id/editButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Edit"
+        android:textAllCaps="false"
+        android:backgroundTint="#E3C9B1"
+        android:textColor="#4B2E2E"
+        android:layout_gravity="end" />
+</LinearLayout>
