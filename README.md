@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Travel Jurnal App
 
 This is an Android mobile app that allows users to log their trip with photos and notes, and view visited locations as pin on interactive map.
@@ -16,3 +17,6 @@ This is an Android mobile app that allows users to log their trip with photos an
 3. Configure Firebase with your own project credentials.
 4. Build and run on an Android device or emulator.
 
+=======
+# TravelJurnal-Dissertation
+>>>>>>> 3a6e49c6a6b13598df65b42ce90998d7112d1de3
