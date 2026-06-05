@@ -1,4 +1,4 @@
-package com.example.traveljurnalapp;;
+package com.example.traveljurnalapp;
 
 import android.Manifest;
 import android.content.Context;

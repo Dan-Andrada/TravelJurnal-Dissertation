@@ -76,7 +76,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         ImageButton searchButton = findViewById(R.id.searchMapButton);
 
         if (!Places.isInitialized()) {
-            Places.initialize(getApplicationContext(), "AIzaSyAMsrR3jxgkvlaP-V3rzrLc6ZCf3ivtxLg");
+            Places.initialize(getApplicationContext(), "AIzaSyDo_qV9FapssThsc9Sx-LKlofb17FFCOJ4");
         }
 
         placesClient = Places.createClient(this);
