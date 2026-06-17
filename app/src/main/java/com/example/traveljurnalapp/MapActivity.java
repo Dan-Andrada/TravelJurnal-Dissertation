@@ -20,6 +20,7 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.util.Log;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -150,13 +151,16 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMaps = googleMap;
+        Toast.makeText(this, "Map ready started", Toast.LENGTH_LONG).show();
+        Log.d("PERFORMANCE_MARKERS", "onMapReady STARTED");
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
         LatLng defaultLoc = new LatLng(48.8584, 2.2945); // Eiffel Tower
         mMaps.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLoc, 4));
+        loadTripMarkers();
 
-        db.collection("users")
+        /*db.collection("users")
                 .document(user.getUid())
                 .collection("trips")
                 .get()
@@ -196,6 +200,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                     }
                 })
                 .addOnFailureListener(e -> Toast.makeText(this, "Failed to load saved trips", Toast.LENGTH_SHORT).show());
+         */
 
         mMaps.setOnMapClickListener(latLng -> {
             VisitedDialogFragment dialogFragment = new VisitedDialogFragment(latLng, location -> {
@@ -342,44 +347,88 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }
     }
 
-
     private void loadTripMarkers() {
+
+        Log.d("PERFORMANCE_MARKERS", "optimized loadTripMarkers STARTED");
+        long startTime = System.currentTimeMillis();
+
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        if (user == null) {
+            Log.e("PERFORMANCE_MARKERS", "User is null");
+            return;
+        }
 
         db.collection("users")
                 .document(user.getUid())
                 .collection("trips")
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
+                    int totalTrips = queryDocumentSnapshots.size();
+
+                    if (totalTrips == 0) {
+                        long endTime = System.currentTimeMillis();
+
+                        Log.d(
+                                "PERFORMANCE_MARKERS",
+                                "Optimized markers loaded. Trips = 0, queries = 1, duration = "
+                                        + (endTime - startTime)
+                                        + " ms"
+                        );
+                        return;
+                    }
+
                     for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
                         Double latObj = doc.getDouble("lat");
                         Double lngObj = doc.getDouble("lng");
                         String placeName = doc.getString("placeName");
+                        String favoritePhotoUrl = doc.getString("favoritePhotoUrl");
 
                         if (latObj != null && lngObj != null && placeName != null) {
                             LatLng tripLocation = new LatLng(latObj, lngObj);
                             String tripId = doc.getId();
 
-                            // Load favorite image
-                            db.collection("users")
-                                    .document(user.getUid())
-                                    .collection("trips")
-                                    .document(tripId)
-                                    .collection("photos")
-                                    .whereEqualTo("isFavorite", true)
-                                    .get()
-                                    .addOnSuccessListener(photoSnaps -> {
-                                        if (!photoSnaps.isEmpty()) {
-                                            String imageUrl = photoSnaps.getDocuments().get(0).getString("url");
-                                            createCustomMarkerFromUrl(this, mMaps, imageUrl, tripLocation, tripId);
-                                        } else {
-                                            Marker marker = mMaps.addMarker(new MarkerOptions().position(tripLocation).title(placeName));
-                                            marker.setTag(tripId);
-                                        }
-                                    });
+                            if (favoritePhotoUrl != null && !favoritePhotoUrl.isEmpty()) {
+                                createCustomMarkerFromUrl(
+                                        this,
+                                        mMaps,
+                                        favoritePhotoUrl,
+                                        tripLocation,
+                                        tripId
+                                );
+                            } else {
+                                Marker marker = mMaps.addMarker(
+                                        new MarkerOptions()
+                                                .position(tripLocation)
+                                                .title(placeName)
+                                );
+                                marker.setTag(tripId);
+                            }
                         }
                     }
+
+                    long endTime = System.currentTimeMillis();
+
+                    Log.d(
+                            "PERFORMANCE_MARKERS",
+                            "Optimized markers loaded. Trips = "
+                                    + totalTrips
+                                    + ", queries = 1, duration = "
+                                    + (endTime - startTime)
+                                    + " ms"
+                    );
+                })
+                .addOnFailureListener(e -> {
+                    long endTime = System.currentTimeMillis();
+
+                    Log.e(
+                            "PERFORMANCE_MARKERS",
+                            "Optimized trip query failed after "
+                                    + (endTime - startTime)
+                                    + " ms: "
+                                    + e.getMessage()
+                    );
                 });
     }
 

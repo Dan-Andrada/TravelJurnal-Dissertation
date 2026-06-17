@@ -174,6 +174,10 @@ public class UploadPhotosActivity extends AppCompatActivity {
         final int[] uploadedPhotos = {0};
         final int[] failedPhotos = {0};
 
+        if (favoritePosition == -1 && !imageUris.isEmpty()) {
+            favoritePosition = 0;
+        }
+
         for (int i = 0; i < imageUris.size(); i++) {
             Uri imageUri = imageUris.get(i);
 
@@ -194,25 +198,10 @@ public class UploadPhotosActivity extends AppCompatActivity {
                     reduction = (1.0 - ((double) compressedSize / originalSize)) * 100.0;
                 }
 
-                Log.d(
-                        PERFORMANCE_TAG,
-                        "Original size = " + originalSize + " bytes"
-                );
-
-                Log.d(
-                        PERFORMANCE_TAG,
-                        "Compressed size = " + compressedSize + " bytes"
-                );
-
-                Log.d(
-                        PERFORMANCE_TAG,
-                        "Size reduction = " + String.format("%.2f", reduction) + "%"
-                );
-
-                Log.d(
-                        PERFORMANCE_TAG,
-                        "Compression duration = " + compressionDuration + " ms"
-                );
+                Log.d(PERFORMANCE_TAG, "Original size = " + originalSize + " bytes");
+                Log.d(PERFORMANCE_TAG, "Compressed size = " + compressedSize + " bytes");
+                Log.d(PERFORMANCE_TAG, "Size reduction = " + String.format("%.2f", reduction) + "%");
+                Log.d(PERFORMANCE_TAG, "Compression duration = " + compressionDuration + " ms");
 
                 Uri tempUri = Uri.fromFile(compressedFile);
 
@@ -225,6 +214,14 @@ public class UploadPhotosActivity extends AppCompatActivity {
                 );
 
                 int finalI = i;
+                boolean isFavorite = finalI == favoritePosition;
+                Log.d(
+                        PERFORMANCE_TAG,
+                        "finalI = " + finalI
+                                + ", favoritePosition = " + favoritePosition
+                                + ", isFavorite = " + isFavorite
+                                + ", alreadyHasFavorite = " + alreadyHasFavorite
+                );
                 long uploadStart = System.currentTimeMillis();
 
                 ref.putFile(tempUri)
@@ -235,14 +232,14 @@ public class UploadPhotosActivity extends AppCompatActivity {
 
                                     Log.d(
                                             PERFORMANCE_TAG,
-                                            "Firebase upload duration = "
-                                                    + uploadOnlyDuration
-                                                    + " ms"
+                                            "Firebase upload duration = " + uploadOnlyDuration + " ms"
                                     );
 
+                                    String photoUrl = downloadUrl.toString();
+
                                     Map<String, Object> photoData = new HashMap<>();
-                                    photoData.put("url", downloadUrl.toString());
-                                    photoData.put("isFavorite", finalI == favoritePosition && !alreadyHasFavorite);
+                                    photoData.put("url", photoUrl);
+                                    photoData.put("isFavorite", isFavorite);
 
                                     db.collection("users")
                                             .document(user.getUid())
@@ -251,6 +248,27 @@ public class UploadPhotosActivity extends AppCompatActivity {
                                             .collection("photos")
                                             .add(photoData)
                                             .addOnSuccessListener(documentReference -> {
+                                                if (isFavorite) {
+                                                    Log.d(PERFORMANCE_TAG, "Trying to update favoritePhotoUrl for tripId = " + tripId);
+                                                    db.collection("users")
+                                                            .document(user.getUid())
+                                                            .collection("trips")
+                                                            .document(tripId)
+                                                            .update("favoritePhotoUrl", photoUrl)
+                                                            .addOnSuccessListener(unused ->
+                                                                    Log.d(
+                                                                            PERFORMANCE_TAG,
+                                                                            "favoritePhotoUrl updated successfully"
+                                                                    )
+                                                            )
+                                                            .addOnFailureListener(e ->
+                                                                    Log.e(
+                                                                            PERFORMANCE_TAG,
+                                                                            "Failed to update favoritePhotoUrl: " + e.getMessage()
+                                                                    )
+                                                            );
+                                                }
+
                                                 uploadedPhotos[0]++;
 
                                                 checkUploadCompletion(
@@ -407,19 +425,15 @@ public class UploadPhotosActivity extends AppCompatActivity {
     }
 
     private File copyUriToFile(Context context, Uri uri) throws IOException {
+        InputStream inputStream = context.getContentResolver().openInputStream(uri);
 
-        InputStream inputStream =
-                context.getContentResolver().openInputStream(uri);
+        File tempFile = File.createTempFile(
+                "original_",
+                ".jpg",
+                context.getCacheDir()
+        );
 
-        File tempFile =
-                File.createTempFile(
-                        "original_",
-                        ".jpg",
-                        context.getCacheDir()
-                );
-
-        FileOutputStream outputStream =
-                new FileOutputStream(tempFile);
+        FileOutputStream outputStream = new FileOutputStream(tempFile);
 
         byte[] buffer = new byte[1024];
         int length;
